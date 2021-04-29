@@ -121,26 +121,32 @@ def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0, interaction
         # in the initial state using a kd-tree
         if interactionRadius != None:
             kdTree = KDTree(initialCenters)
-            dist, ind = kdTree.query_radius(initialCenters[refParticleIndex], interactionRadius)
-           
+            ind = kdTree.query_radius([initialCenters[refParticleIndex]], interactionRadius)
+            
+            # We ignore the first element since it will always be the particle itself
+            # And we have to sort we don't mess up the order
+            ind = np.sort(ind[0][1:])
+
             # Make sure we actually found some particles
             if len(ind) == 0:
                 print('Warning: no neighbors found within supplied interaction radius! Defaulting to all other particles')
             else:
-                # We ignore the first element since it will always be the particle itself
-                initialNeighbors = initialCenters[ind[1:]]
-                finalNeighbors = finalCenters[ind[1:]]    
+                initialNeighbors = initialCenters[ind]
+                finalNeighbors = finalCenters[ind]    
 
         # If a fixed number of neighbors is provided instead, we find those particles again with
         # a kd-tree
         elif interactionNeighbors != None:
             kdTree = KDTree(initialCenters)
             # Make sure we don't look for more particles than are in our system
-            dist, ind = kdTree.query(initialCenters[refParticleIndex], min(interactionNeighbors, N-1))
-
+            dist, ind = kdTree.query([initialCenters[refParticleIndex]], min(interactionNeighbors+1, N))
+            
             # We ignore the first element since it will always be the particle itself
-            initialNeighbors = initialCenters[ind[1:]]
-            finalNeighbors = finalCenters[ind[1:]]    
+            # And we have to sort we don't mess up the order
+            ind = np.sort(ind[0][1:])
+            
+            initialNeighbors = initialCenters[ind]
+            finalNeighbors = finalCenters[ind]    
 
         # If no information is supplied, or we ran into issues, use every other particle
         if not isinstance(initialNeighbors, list) and not isinstance(initialNeighbors, np.ndarray):
@@ -165,7 +171,7 @@ def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0, interaction
         b = np.mat(finalBonds)
 
         # Calculate the two functions used to minimize D2, X and Y (eq. 2.12 and 2.13 respectively)
-        X = b.transpose() * b0
+        X = b0.transpose() * b
         Y = b0.transpose() * b0
 
         # Calculate the uniform strain tensor that minimizes D2 (eq. 2.14)
@@ -181,6 +187,9 @@ def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0, interaction
 
         # The final value
         d2min = np.sum(np.square(non_affine))
+
+        if normalize:
+            d2min /= len(initialNeighbors)
 
         # Since we have been working with the transpose of the strain tensor,
         # we have to transpose to get the proper one
