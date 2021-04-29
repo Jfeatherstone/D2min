@@ -9,7 +9,7 @@ Since this code is intended for use within other projects, CLI access has been r
 
 ## Documentation
 
-Documentation for the function can be found [here](jfeatherstone.github.io/D2min).
+Documentation for the function can be found [here](https://jfeatherstone.github.io/D2min).
 
 ## Examples
 
