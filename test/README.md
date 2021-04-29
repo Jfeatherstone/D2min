@@ -4,7 +4,7 @@ This folder contains a test initial and final state to demonstrate usage of the 
 
 The test scenario is a small cluster of particles from Ryan Kozlowski's slider experiment at Duke:
 
-![test_particles](test/test_particles.png)
+![test_particles](test_particles.png)
 
 See the Jupyter Notebook for example usage and results from this implementation of the calculation.
 
