@@ -7,14 +7,15 @@ Modifications from [upstream repo](https://github.com/Binxu-Stack/D2min) include
 and change from bond-focused calculation to center-focused calculation (see code for more details).
 Since this code is intended for use within other projects, CLI access has been removed.
 
-Examples
---------
+## Documentation
+
+Documentation for the function can be found [here](jfeatherstone.github.io/D2min).
+
+## Examples
 
 See [test](https://github.com/Jfeatherstone/D2min/tree/master/test) folder in repository for example usage.
-
-    
-References
-----------    
+  
+## References
 
 Falk, M. L., & Langer, J. S. (1998). Dynamics of viscoplastic deformation in amorphous solids. Physical Review E, 57(6), 7192–7205.
 [https://doi.org/10.1103/PhysRevE.57.7192](https://doi.org/10.1103/PhysRevE.57.7192)

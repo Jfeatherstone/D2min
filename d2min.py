@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+https://github.com/Jfeatherstone/D2min
+
 A script to solve D2min field between two different particle states.
 
 Originally forked from:
 https://github.com/Binxu-Stack/D2min
-created by Bin Xu (xubinrun@gmail.com)
+created by Bin Xu.
 
 Modifications include more documentation, change of notation,
 and change from bond-focused calculation to center-focused
@@ -79,6 +81,7 @@ def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0, interaction
 
     epsilon : [d, d] numpy.ndarray
         The uniform strain tensor that minimizes D2; equation 2.14 in Falk & Langer (1998).
+
 
     In the case that refParticleIndex=None, the return will instead be a tuple of numpy arrays
     containing the same information but for every particle:
