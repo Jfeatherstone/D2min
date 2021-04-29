@@ -20,13 +20,16 @@ removed.
 import numpy as np
 from numpy.linalg import inv
 
-def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0):
+# For calculating which neighbors are within a certain distance
+from sklearn.neighbors import KDTree
+
+def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0, interactionRadius=None, interactionNeighbors=None, normalize=True):
     """
     Calculate the d2min between an initial and final state of particles;
     a measure of how non-affine the transformation is, as originally described
     in Falk & Langer (1998).
 
-
+    
     Parameters
     ----------
 
@@ -40,8 +43,28 @@ def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0):
     refParticleIndex : int (default=0)
         The index of the particle to treat as the reference particle (r_0 in Falk & Langer
         1998 eq. 2.11). If set to None, will calculate the D2min N times using each particle
-        as the reference (and return types will have an extra first dimension N).
+        as the reference (and return types will have an extra first dimension N). Simiarly, can
+        be a list of indices for which to calculate as the refernce indices.
 
+    interactionRadius : double (default=None)
+        The maximum distance between particles that can be considered neighbors. Recommended to
+        be set to around 1.1 - 1.5 times the mean particle radius of the system.
+
+        If set to None, all other particles in the system will be considered neighbors. See interactionNeighbors
+        for specifying a fixed number of neighbors. In the case that neither a radius or number of
+        neighbors are specified, calculation will default to using all other particles as neighbors.
+
+    interactionNeighbors : int (default=None)
+        As opposed to using an interactionRadius to define neighbors, a fixed number of neighbors can
+        be specified here. This number of neighbors will be found using a kd-tree for the reference point(s).
+
+        In the case that neither a radius or number of neighbors are specified, calculation will default
+        to using all other particles as neighbors.
+
+    normalize : bool (default=True)
+        Whether to divide the d2min by the number of neighbors used to calculate it (True) or not (False).
+        For heterogeneous systems where the number of neighbors can vary significantly, recommend to set True.
+        Will make little difference if a fixed number of neighbors (see interactionNeigbors) are used.
 
     Returns
     -------
@@ -49,7 +72,10 @@ def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0):
     (d2min, epsilon)
 
     d2min : double
-        The minimum value of D2 for the transition from the initial to final state.
+        The minimum value of D2 for the transition from the initial to final state. Units
+        are a squared distance dimensionally the same as the initial and final centers (likely
+        a pixel^2 value if tracked from images). Changing units to particle diameters afterwards
+        may be necessary.
 
     epsilon : [d, d] numpy.ndarray
         The uniform strain tensor that minimizes D2; equation 2.14 in Falk & Langer (1998).
@@ -87,6 +113,41 @@ def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0):
     # In the case that a single reference particle is defined, we just calculate exactly as described in the paper
     if not isinstance(refParticleIndex, list) and not isinstance(refParticleIndex, np.ndarray) and refParticleIndex != None:
 
+        # Determine which particles are neighbors using the parameters supplied on the function call
+        initialNeighbors = None
+        finalNeighbors = None
+
+        # If an interaction radius is supplied, we have to find the particles that are closest
+        # in the initial state using a kd-tree
+        if interactionRadius != None:
+            kdTree = KDTree(initialCenters)
+            dist, ind = kdTree.query_radius(initialCenters[refParticleIndex], interactionRadius)
+           
+            # Make sure we actually found some particles
+            if len(ind) == 0:
+                print('Warning: no neighbors found within supplied interaction radius! Defaulting to all other particles')
+            else:
+                # We ignore the first element since it will always be the particle itself
+                initialNeighbors = initialCenters[ind[1:]]
+                finalNeighbors = finalCenters[ind[1:]]    
+
+        # If a fixed number of neighbors is provided instead, we find those particles again with
+        # a kd-tree
+        elif interactionNeighbors != None:
+            kdTree = KDTree(initialCenters)
+            # Make sure we don't look for more particles than are in our system
+            dist, ind = kdTree.query(initialCenters[refParticleIndex], min(interactionNeighbors, N-1))
+
+            # We ignore the first element since it will always be the particle itself
+            initialNeighbors = initialCenters[ind[1:]]
+            finalNeighbors = finalCenters[ind[1:]]    
+
+        # If no information is supplied, or we ran into issues, use every other particle
+        if not isinstance(initialNeighbors, list) and not isinstance(initialNeighbors, np.ndarray):
+            initialNeighbors = initialCenters[np.arange(N) != refParticleIndex]
+            finalNeighbors = finalCenters[np.arange(N) != refParticleIndex]
+
+        # Now onto the actual D2min calculation
         # Bin's original code defined the differences between centers in
         # Falk & Langer eq. 2.11 - 2.13 as "bonds"
 
@@ -94,8 +155,9 @@ def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0):
         # Do this by subtracting the ref particle center from the center of every other particle
         # Note that you could technically leave in the ref bond, since it will be 0 and not contribute,
         # but it is cleaner to just remove it
-        initialBonds = initialCenters[np.arange(N) != refParticleIndex] - initialCenters[refParticleIndex]
-        finalBonds = finalCenters[np.arange(N) != refParticleIndex] - finalCenters[refParticleIndex]
+
+        initialBonds = initialNeighbors - initialCenters[refParticleIndex]
+        finalBonds = finalNeighbors - finalCenters[refParticleIndex]
 
         # More succinct notation for doing the calculation, from Bin's original code
         # Converting to numpy matrices makes matrix multiplication happen automatically
@@ -132,7 +194,8 @@ def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0):
     
     for i in range(len(refParticleIndex)):
 
-        d2min, epsilon = calculateD2Min(initialCenters, finalCenters, refParticleIndex[i])
+        d2min, epsilon = calculateD2Min(initialCenters, finalCenters, refParticleIndex[i],
+                                       interactionRadius, interactionNeighbors, normalize)
         d2minArr[i] = d2min
         epsilonArr[i] = epsilon
 
