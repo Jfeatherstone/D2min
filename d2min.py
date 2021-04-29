@@ -182,7 +182,9 @@ def calculateD2Min(initialCenters, finalCenters, refParticleIndex=0, interaction
         # The final value
         d2min = np.sum(np.square(non_affine))
 
-        return (d2min, np.array(epsilon))
+        # Since we have been working with the transpose of the strain tensor,
+        # we have to transpose to get the proper one
+        return (d2min, np.array(epsilon.transpose()))
 
     # If we don't have a reference particle, or we are given multiple, we calculate for each of those
     if not isinstance(refParticleIndex, list) and not isinstance(refParticleIndex, np.ndarray):
